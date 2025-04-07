@@ -83,11 +83,16 @@ FOLLOW(E) = { $, ) }
 **Valid:**
 - `id`
 - `id AND id`
-- `id OR (NOT id)`
+- `id OR ( NOT id )`
+- `( id ) with spaces`
 
 **Invalid:**
 - `AND id`
 - `id AND (id OR)`
+- `(id) no spaces`
+
+**Obs:**
+- spaces are the delimiter for the tokens
 
 ---
 
@@ -179,12 +184,16 @@ Onde:
 Comandos válidos:
 - `id`
 - `id AND id`
-- `id OR (NOT id)`
+- `id OR ( NOT id )`
+- `( id ) com espaços`
 
 Comandos inválidos:
 - `AND id`
 - `id AND (id OR)`
+- `(id) sem espaços`
 
+**Obs:**
+- espaços são os delimitadores dos tokens
 ---
 
 ## Testes
