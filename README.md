@@ -1,4 +1,120 @@
-# Analisador Sintático com Gramática Fatorada - Recursive Descent Parser
+# Recursive Descent Parser with Factored Grammar
+
+## Overview
+
+This project is a syntax analyzer built in Java using Spring Boot, based on a factored context-free grammar. The parser follows a **recursive descent** approach and generates a **parse tree** for the input string.
+
+A simple web interface is provided so users can input commands and check if they are valid according to the defined grammar.
+
+---
+
+## Features
+
+- Syntactic analysis of textual inputs  
+- Generation and textual display of the parse tree  
+- Detailed error messages for invalid input  
+- Clean web interface for command input and validation  
+- Embedded image showing the grammar used  
+- Unit tests to validate the REST API  
+
+---
+
+## Technologies Used
+
+- **Java 21**  
+- **Spring Boot**  
+- **Thymeleaf** (for HTML rendering)  
+- **JUnit 5** (for unit testing)  
+- **Maven** (for dependency management)  
+
+---
+
+## Grammar Used
+
+The factored grammar for logical expressions is as follows:
+
+```
+E  → T E'
+E' → AND T E' | OR T E' | ε
+T  → NOT F | F
+F  → ( E ) | id
+```
+
+Where:
+- `id` represents an identifier  
+- `AND`, `OR`, `NOT` are logical operators  
+- `ε` represents the empty production  
+
+---
+
+## FIRST and FOLLOW Sets
+
+The project includes an implementation of the **FIRST** and **FOLLOW** set computation algorithms for all non-terminals.
+
+These sets are essential for:
+- Grammar validation
+- Building LL(1) parsing tables
+- Deciding which production to use during parsing
+
+#### Example with the current grammar:
+
+```
+FIRST(E)  = { id, (, NOT }
+FOLLOW(E) = { $, ) }
+```
+
+---
+
+## How to Run
+
+1. Clone the repository  
+2. Run using:  
+   ```bash
+   mvn spring-boot:run
+   ```  
+3. Open [http://localhost:8080](http://localhost:8080)  
+4. Type a command and click "Validate"  
+5. Check the result (valid/invalid) and view the parse tree if applicable  
+
+---
+
+## Example Commands
+
+**Valid:**
+- `id`
+- `id AND id`
+- `id OR (NOT id)`
+
+**Invalid:**
+- `AND id`
+- `id AND (id OR)`
+
+---
+
+## Tests
+
+To run unit tests:
+```bash
+mvn test
+```
+
+The tests cover the `/verify` endpoint with valid and invalid inputs.
+
+---
+
+## Next Steps
+
+The project is being extended to include an **LL(1) parser** using a **parsing table** and **analysis stack**, along with a stack execution simulator.
+
+---
+
+## License
+
+This project is intended for academic use and does not yet have a defined license.
+
+---
+
+# Analisador Sintático com Gramática Fatorada - Recursive Descent Parser (PT-BR)
 
 ## Visão Geral
 
