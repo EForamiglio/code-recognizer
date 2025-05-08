@@ -1,5 +1,6 @@
 package com.pedrik.recognizer.service;
 
+import com.pedrik.recognizer.service.analytic.RecursiveDescentParser;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

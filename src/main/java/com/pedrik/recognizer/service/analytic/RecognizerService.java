@@ -1,4 +1,4 @@
-package com.pedrik.recognizer.service;
+package com.pedrik.recognizer.service.analytic;
 
 import com.pedrik.recognizer.controller.dto.ParseResponseDto;
 import org.springframework.stereotype.Service;

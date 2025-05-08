@@ -2,7 +2,7 @@ package com.pedrik.recognizer.controller;
 
 import com.pedrik.recognizer.controller.dto.InstructionDto;
 import com.pedrik.recognizer.controller.dto.ParseResponseDto;
-import com.pedrik.recognizer.service.RecognizerService;
+import com.pedrik.recognizer.service.analytic.RecognizerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
