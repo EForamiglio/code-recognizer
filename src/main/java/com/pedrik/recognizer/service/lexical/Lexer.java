@@ -1,249 +1,228 @@
 package com.pedrik.recognizer.service.lexical;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Lexer {
-    private enum State { DEFAULT, STRING, COMMENT }
+
+    private static final String TOKEN_REGEX =
+            "(?<WHITESPACE>[ \t\r\f]+)|" +
+                    "(?<NEWLINE>\n)|" +
+                    "(?<COMMENTLINE>//[^\n]*)|" +
+                    "(?<COMMENTBLOCK>/\\*(.|\\R)*?\\*/)|" +
+                    "(?<STRING>\"([^\"\\\\]|\\\\.)*\")|" +
+                    "(?<KEYWORD>\\b(?:if|else|while|return)\\b)|" +
+                    "(?<IDENTIFIER>\\b[a-zA-Z_][a-zA-Z_0-9]*\\b)|" +
+                    "(?<NUMBER>\\b\\d+\\b)|" +
+                    "(?<OPERATOR>==|!=|<=|>=|\\+|-|\\*|/|=|<|>)|" +
+                    "(?<DELIMITER>[{}()\\[\\];,])";
 
     private final String input;
-    private final List<Token> tokens;
-    private int position;
-    private int line;
-    private int column;
-    private State state;
-
-    private static final List<String> KEYWORDS = Arrays.asList(
-            "if", "else", "while", "for", "return", "true", "false",
-            "int", "float", "string", "boolean", "void"
-    );
+    private final List<Token> tokens = new ArrayList<>();
+    private final Pattern tokenPatterns = Pattern.compile(TOKEN_REGEX);
+    private int index = 0;
+    private int line = 1;
+    private int column = 1;
 
     public Lexer(String input) {
         this.input = input;
-        this.tokens = new ArrayList<>();
-        this.position = 0;
-        this.line = 1;
-        this.column = 1;
-        this.state = State.DEFAULT;
     }
 
-    public List<Token> tokenizeAll() {
-        while (!isAtEnd()) {
-            skipWhitespace();
-            if (isAtEnd()) break;
-            char current = peek();
+    public List<Token> tokenize() {
+        while (index < input.length()) {
+            char currentChar = input.charAt(index);
 
-            switch (state) {
-                case DEFAULT:
-                    if (Character.isLetter(current) || current == '_') {
-                        tokenizeIdentifierOrKeyword();
-                    } else if (Character.isDigit(current)) {
-                        tokenizeNumber();
-                    } else if (current == '"') {
-                        state = State.STRING;
-                        tokenizeString();
-                    } else if (current == '/' && matchNext('/')) {
-                        state = State.COMMENT;
-                        tokenizeLineComment();
-                    } else if (current == '/' && matchNext('*')) {
-                        state = State.COMMENT;
-                        tokenizeBlockComment();
-                    } else if (isOperatorStart(current)) {
-                        tokenizeOperator();
-                    } else if (isSeparator(current)) {
-                        tokenizeSeparator();
-                    } else {
-                        advance();
+            // Unterminated string check
+            if (currentChar == '"') {
+                int start = index;
+                int colStart = column;
+
+                index++;
+                column++;
+                boolean closed = false;
+
+                while (index < input.length()) {
+                    char ch = input.charAt(index);
+                    if (ch == '"') {
+                        closed = true;
+                        break;
                     }
+                    if (ch == '\n') {
+                        line++;
+                        column = 1;
+                    } else {
+                        column++;
+                    }
+                    index++;
+                }
+
+                if (!closed) {
+                    String lexeme = input.substring(start);
+                    tokens.add(new Token(TokenType.ERROR, "Unterminated string: " + lexeme, line, colStart));
                     break;
-                case STRING:
-                    tokenizeString();
-                    break;
-                case COMMENT:
-                    // já estamos no método tokenizeLineComment ou tokenizeBlockComment
-                    break;
+                }
+
+                // consume closing quote
+                index++;
+                column++;
+                continue;
             }
 
+            // Unterminated block comment check
+            if (currentChar == '/' && index + 1 < input.length() && input.charAt(index + 1) == '*') {
+                int start = index;
+                int colStart = column;
+
+                index += 2;
+                column += 2;
+                boolean closed = false;
+
+                while (index + 1 < input.length()) {
+                    if (input.charAt(index) == '*' && input.charAt(index + 1) == '/') {
+                        closed = true;
+                        break;
+                    }
+                    if (input.charAt(index) == '\n') {
+                        line++;
+                        column = 1;
+                    } else {
+                        column++;
+                    }
+                    index++;
+                }
+
+                if (!closed) {
+                    String lexeme = input.substring(start);
+                    tokens.add(new Token(TokenType.ERROR, "Unterminated block comment: " + lexeme, line, colStart));
+                    break;
+                }
+
+                // consume closing */
+                index += 2;
+                column += 2;
+                continue;
+            }
+
+            Matcher matcher = tokenPatterns.matcher(input);
+            matcher.region(index, input.length());
+
+            if (matcher.lookingAt()) {
+                String lexeme = matcher.group();
+                Token token = null;
+
+                if (matcher.group("WHITESPACE") != null || matcher.group("NEWLINE") != null) {
+                    if ("\n".equals(lexeme)) {
+                        line++;
+                        column = 1;
+                    } else {
+                        column += lexeme.length();
+                    }
+                    index += lexeme.length();
+                    continue;
+                }
+
+                if (matcher.group("LINE_COMMENT") != null) {
+                    String comment = lexeme.substring(2).trim();
+                    token = new Token(TokenType.COMMENT_LINE, comment, line, column);
+                } else if (matcher.group("BLOCK_COMMENT") != null) {
+                    String comment = lexeme.substring(2, lexeme.length() - 2).trim();
+                    token = new Token(TokenType.COMMENT_BLOCK, comment, line, column);
+                } else if (matcher.group("STRING") != null) {
+                    String clean = lexeme.substring(1, lexeme.length() - 1);
+                    token = new Token(TokenType.STRING, clean, line, column);
+                } else if (matcher.group("KEYWORD") != null) {
+                    token = new Token(TokenType.KEYWORD, lexeme, line, column);
+                } else if (matcher.group("IDENTIFIER") != null) {
+                    token = new Token(TokenType.IDENTIFIER, lexeme, line, column);
+                } else if (matcher.group("NUMBER") != null) {
+                    token = new Token(TokenType.NUMBER, lexeme, line, column);
+                } else if (matcher.group("OPERATOR") != null) {
+                    token = new Token(TokenType.OPERATOR, lexeme, line, column);
+                } else if (matcher.group("DELIMITER") != null) {
+                    token = new Token(TokenType.DELIMITER, lexeme, line, column);
+                }
+
+                if (token != null) {
+                    tokens.add(token);
+                }
+
+                index += lexeme.length();
+                column += lexeme.length();
+            } else {
+                tokens.add(new Token(TokenType.ERROR, "Invalid character: " + currentChar, line, column));
+                index++;
+                column++;
+            }
         }
+
         tokens.add(new Token(TokenType.EOF, "", line, column));
         return tokens;
     }
 
-    private void skipWhitespace() {
-        while (!isAtEnd()) {
-            char c = peek();
-            if (c == ' ' || c == '\t' || c == '\r') {
-                advance();
-            } else if (c == '\n') {
-                advance();
-                line++;
-                column = 1;
-            } else {
-                break;
+    private Token currentToken;
+
+    public Token nextToken() {
+        if (position >= input.length()) {
+            return new Token(TokenType.EOF, "", position);
+        }
+
+        Matcher matcher = TOKEN_PATTERN.matcher(input);
+        matcher.region(position, input.length());
+
+        if (matcher.lookingAt()) {
+            for (TokenType type : TokenType.values()) {
+                String value = matcher.group(type.name());
+                if (value != null) {
+                    position = matcher.end();
+                    String lexeme = value;
+
+                    if (type == TokenType.STRING && !lexeme.endsWith("\"")) {
+                        return new Token(TokenType.ERROR, "Unterminated string: " + lexeme, matcher.start());
+                    }
+
+                    if (type == TokenType.COMMENT_BLOCK && !lexeme.endsWith("*/")) {
+                        return new Token(TokenType.ERROR, "Unterminated block comment: " + lexeme, matcher.start());
+                    }
+
+                    // Remover aspas de strings
+                    if (type == TokenType.STRING) {
+                        lexeme = lexeme.substring(1, lexeme.length() - 1);
+                    }
+
+                    // Remover prefixo de comentários
+                    if (type == TokenType.COMMENT_LINE) {
+                        lexeme = lexeme.substring(2).trim();
+                    }
+                    if (type == TokenType.COMMENT_BLOCK) {
+                        lexeme = lexeme.substring(2, lexeme.length() - 2).trim();
+                    }
+
+                    // Ignorar tokens irrelevantes
+                    if (type == TokenType.WHITESPACE || type == TokenType.NEWLINE) {
+                        return nextToken();
+                    }
+
+                    return new Token(type, lexeme, matcher.start());
+                }
             }
         }
-    }
 
-    private void tokenizeIdentifierOrKeyword() {
-        int start = position;
-        int startColumn = column;
-        while (!isAtEnd() && (Character.isLetterOrDigit(peek()) || peek() == '_')) {
-            advance();
-        }
-        String text = input.substring(start, position);
-        TokenType type = KEYWORDS.contains(text) ? TokenType.KEYWORD : TokenType.IDENTIFIER;
-        tokens.add(new Token(type, text, line, startColumn));
-    }
-
-    private void tokenizeNumber() {
-        int start = position;
-        int startColumn = column;
-        boolean hasDot = false;
-
-        while (!isAtEnd() && (Character.isDigit(peek()) || (!hasDot && peek() == '.'))) {
-            if (peek() == '.') hasDot = true;
-            advance();
-        }
-
-        String number = input.substring(start, position);
-        tokens.add(new Token(TokenType.NUMBER, number, line, startColumn));
-    }
-
-    private void tokenizeString() {
-        int startColumn = column;
-        advance(); // Consumir a primeira aspa "
-
-        int start = position;
-        while (!isAtEnd() && peek() != '"') {
-            if (peek() == '\n') {
-                tokens.add(new Token(TokenType.ERROR, "Unterminated string", line, column));
-                state = State.DEFAULT;
-                return;
-            }
-            advance();
-        }
-
-        if (isAtEnd()) {
-            tokens.add(new Token(TokenType.ERROR, "Unterminated string", line, column));
-            state = State.DEFAULT;
-            return;
-        }
-
-        String str = input.substring(start, position);
-        advance(); // Consumir a aspa final
-        tokens.add(new Token(TokenType.STRING, str, line, startColumn));
-        state = State.DEFAULT;
-    }
-
-    private boolean isOperatorStart(char c) {
-        return "+-*/=<>!&|".indexOf(c) != -1;
-    }
-
-    private void tokenizeOperator() {
-        int startColumn = column;
-        char first = peek();
-        advance();
-        if (!isAtEnd()) {
-            char second = peek();
-            String combined = "" + first + second;
-            if (combined.equals("==") || combined.equals("!=") ||
-                    combined.equals("<=") || combined.equals(">=") ||
-                    combined.equals("&&") || combined.equals("||")) {
-                advance();
-                tokens.add(new Token(TokenType.OPERATOR, combined, line, startColumn));
-                return;
-            }
-        }
-        tokens.add(new Token(TokenType.OPERATOR, String.valueOf(first), line, startColumn));
-    }
-
-    private boolean isSeparator(char c) {
-        return "();{},[]".indexOf(c) != -1;
-    }
-
-    private void tokenizeSeparator() {
-        int startColumn = column;
-        char c = peek();
-        advance();
-        tokens.add(new Token(TokenType.SEPARATOR, String.valueOf(c), line, startColumn));
-    }
-
-    private void tokenizeLineComment() {
-        advance(); // consumir o primeiro '/'
-        advance(); // consumir o segundo '/'
-
-        int start = position;
-        int startColumn = column;
-
-        while (!isAtEnd() && peek() != '\n') {
-            advance();
-        }
-
-        String comment = input.substring(start, position);
-        tokens.add(new Token(TokenType.COMMENT, comment, line, startColumn));
-        state = State.DEFAULT;
-    }
-
-    private void tokenizeBlockComment() {
-        advance(); // consumir o primeiro '/'
-        advance(); // consumir o '*'
-
-        int start = position;
-        int startColumn = column;
-
-        while (!isAtEnd()) {
-            if (peek() == '*' && matchNext('/')) {
-                advance(); // consumir '*'
-                advance(); // consumir '/'
-                break;
-            }
-            if (peek() == '\n') {
-                line++;
-                column = 1;
-            }
-            advance();
-        }
-
-        if (isAtEnd()) {
-            tokens.add(new Token(TokenType.ERROR, "Unterminated block comment", line, startColumn));
-        } else {
-            String comment = input.substring(start, position - 2); // sem o */
-            tokens.add(new Token(TokenType.COMMENT, comment, line, startColumn));
-        }
-        state = State.DEFAULT;
-    }
-
-    private boolean matchNext(char expected) {
-        if (position + 1 >= input.length()) return false;
-        return input.charAt(position + 1) == expected;
-    }
-
-    private boolean isAtEnd() {
-        return position >= input.length();
-    }
-
-    private char peek() {
-        return input.charAt(position);
-    }
-
-    private void advance() {
+        // Se não casou nenhum token válido
+        String invalidChar = String.valueOf(input.charAt(position));
         position++;
-        column++;
+        return new Token(TokenType.ERROR, "Invalid character: " + invalidChar, position - 1);
     }
 
-    public static void main(String[] args) {
-        String code = """
-        int a = 5;
-        /* Comentário não fechado
-        string b = "Erro";
-        """;
-
-
-        Lexer lexer = new Lexer(code);
-        List<Token> tokens = lexer.tokenizeAll();
-
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+    public List<Token> tokenizeAll() {
+        List<Token> tokens = new ArrayList<>();
+        Token token;
+        do {
+            token = nextToken();
+            tokens.add(token);
+        } while (token.getType() != TokenType.EOF);
+        return tokens;
     }
+
 }
-
