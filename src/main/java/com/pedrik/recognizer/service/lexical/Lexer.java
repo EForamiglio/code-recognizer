@@ -13,7 +13,7 @@ public class Lexer {
                     "(?<COMMENTLINE>//[^\n]*)|" +
                     "(?<COMMENTBLOCK>/\\*(.|\\R)*?\\*/)|" +
                     "(?<STRING>\"([^\"\\\\]|\\\\.)*\")|" +
-                    "(?<KEYWORD>\\b(?:if|else|while|return)\\b)|" +
+                    "(?<KEYWORD>\\b(?:if|else|while|return|int|string|boolean|true|false)\\b)|" +
                     "(?<IDENTIFIER>\\b[a-zA-Z_][a-zA-Z_0-9]*\\b)|" +
                     "(?<NUMBER>\\b\\d+\\b)|" +
                     "(?<OPERATOR>==|!=|<=|>=|\\+|-|\\*|/|=|<|>)|" +
@@ -64,6 +64,10 @@ public class Lexer {
                     break;
                 }
 
+                int end = index;
+                String content = input.substring(start + 1, end); // sem aspas
+                tokens.add(new Token(TokenType.STRING, content, line, colStart));
+
                 // consume closing quote
                 index++;
                 column++;
@@ -99,6 +103,10 @@ public class Lexer {
                     break;
                 }
 
+                int end = index;
+                String comment = input.substring(start + 2, end).trim(); // sem /* */
+                tokens.add(new Token(TokenType.COMMENT_BLOCK, comment, line, colStart));
+
                 // consume closing */
                 index += 2;
                 column += 2;
@@ -123,10 +131,10 @@ public class Lexer {
                     continue;
                 }
 
-                if (matcher.group("LINE_COMMENT") != null) {
+                if (matcher.group("COMMENTLINE") != null) {
                     String comment = lexeme.substring(2).trim();
                     token = new Token(TokenType.COMMENT_LINE, comment, line, column);
-                } else if (matcher.group("BLOCK_COMMENT") != null) {
+                } else if (matcher.group("COMMENTBLOCK") != null) {
                     String comment = lexeme.substring(2, lexeme.length() - 2).trim();
                     token = new Token(TokenType.COMMENT_BLOCK, comment, line, column);
                 } else if (matcher.group("STRING") != null) {
@@ -158,70 +166,6 @@ public class Lexer {
         }
 
         tokens.add(new Token(TokenType.EOF, "", line, column));
-        return tokens;
-    }
-
-    private Token currentToken;
-
-    public Token nextToken() {
-        if (position >= input.length()) {
-            return new Token(TokenType.EOF, "", position);
-        }
-
-        Matcher matcher = TOKEN_PATTERN.matcher(input);
-        matcher.region(position, input.length());
-
-        if (matcher.lookingAt()) {
-            for (TokenType type : TokenType.values()) {
-                String value = matcher.group(type.name());
-                if (value != null) {
-                    position = matcher.end();
-                    String lexeme = value;
-
-                    if (type == TokenType.STRING && !lexeme.endsWith("\"")) {
-                        return new Token(TokenType.ERROR, "Unterminated string: " + lexeme, matcher.start());
-                    }
-
-                    if (type == TokenType.COMMENT_BLOCK && !lexeme.endsWith("*/")) {
-                        return new Token(TokenType.ERROR, "Unterminated block comment: " + lexeme, matcher.start());
-                    }
-
-                    // Remover aspas de strings
-                    if (type == TokenType.STRING) {
-                        lexeme = lexeme.substring(1, lexeme.length() - 1);
-                    }
-
-                    // Remover prefixo de comentários
-                    if (type == TokenType.COMMENT_LINE) {
-                        lexeme = lexeme.substring(2).trim();
-                    }
-                    if (type == TokenType.COMMENT_BLOCK) {
-                        lexeme = lexeme.substring(2, lexeme.length() - 2).trim();
-                    }
-
-                    // Ignorar tokens irrelevantes
-                    if (type == TokenType.WHITESPACE || type == TokenType.NEWLINE) {
-                        return nextToken();
-                    }
-
-                    return new Token(type, lexeme, matcher.start());
-                }
-            }
-        }
-
-        // Se não casou nenhum token válido
-        String invalidChar = String.valueOf(input.charAt(position));
-        position++;
-        return new Token(TokenType.ERROR, "Invalid character: " + invalidChar, position - 1);
-    }
-
-    public List<Token> tokenizeAll() {
-        List<Token> tokens = new ArrayList<>();
-        Token token;
-        do {
-            token = nextToken();
-            tokens.add(token);
-        } while (token.getType() != TokenType.EOF);
         return tokens;
     }
 

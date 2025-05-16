@@ -5,22 +5,11 @@ import com.pedrik.recognizer.service.lexical.Token;
 import com.pedrik.recognizer.service.lexical.TokenType;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class LexerTest {
-
-    private List<Token> tokenizeAll(Lexer lexer) {
-        List<Token> tokens = new ArrayList<>();
-        Token token;
-        do {
-            token = lexer.nextToken();
-            tokens.add(token);
-        } while (token.getType() != TokenType.EOF);
-        return tokens;
-    }
 
     private Token assertToken(List<Token> tokens, int index, TokenType expectedType, String expectedLexeme) {
         Token token = tokens.get(index);
@@ -33,7 +22,7 @@ class LexerTest {
     void testKeywordsIdentifiersAndOperators() {
         String input = "int idade = 30;\nif (idade >= 18) { return true; }";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
         assertToken(tokens, 0, TokenType.KEYWORD, "int");
         assertToken(tokens, 1, TokenType.IDENTIFIER, "idade");
@@ -58,7 +47,7 @@ class LexerTest {
     void testStringLiterals() {
         String input = "string nome = \"João\";";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
         assertToken(tokens, 0, TokenType.KEYWORD, "string");
         assertToken(tokens, 1, TokenType.IDENTIFIER, "nome");
@@ -72,7 +61,7 @@ class LexerTest {
     void testLineComment() {
         String input = "// isso é um comentário";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
         assertToken(tokens, 0, TokenType.COMMENT_LINE, "isso é um comentário");
         assertToken(tokens, 1, TokenType.EOF, "");
@@ -82,7 +71,7 @@ class LexerTest {
     void testBlockComment() {
         String input = "/* bloco \n comentário */";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
         assertToken(tokens, 0, TokenType.COMMENT_BLOCK, "bloco \n comentário");
         assertToken(tokens, 1, TokenType.EOF, "");
@@ -92,30 +81,28 @@ class LexerTest {
     void testUnterminatedString() {
         String input = "string erro = \"incompleto;";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
-        Token errorToken = tokens.stream().filter(t -> t.getType() == TokenType.ERROR).findFirst().orElse(null);
-        assertNotNull(errorToken, "Expected an ERROR token");
-        assertTrue(errorToken.getLexeme().contains("Unterminated string"));
+        assertEquals(TokenType.ERROR, tokens.get(3).getType());
+        assertTrue(tokens.get(3).getLexeme().contains("Unterminated string"));
     }
 
     @Test
     void testUnterminatedBlockComment() {
         String input = "/* sem fim";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
-        Token errorToken = tokens.stream().filter(t -> t.getType() == TokenType.ERROR).findFirst().orElse(null);
-        assertNotNull(errorToken, "Expected an ERROR token");
-        assertTrue(errorToken.getLexeme().contains("Unterminated block comment"));
+        assertEquals(TokenType.ERROR, tokens.get(0).getType());
+        assertTrue(tokens.get(0).getLexeme().contains("Unterminated block comment"));
     }
 
     @Test
     void testInvalidCharacter() {
         String input = "int x = 10 @;";
         Lexer lexer = new Lexer(input);
-        List<Token> tokens = tokenizeAll(lexer);
+        List<Token> tokens = lexer.tokenize();
 
-        assertTrue(tokens.stream().anyMatch(t -> t.getType() == TokenType.ERROR), "Expected at least one ERROR token");
+        assertTrue(tokens.stream().anyMatch(t -> t.getType() == TokenType.ERROR));
     }
 }
