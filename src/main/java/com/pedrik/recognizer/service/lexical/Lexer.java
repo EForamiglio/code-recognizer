@@ -13,7 +13,7 @@ public class Lexer {
                     "(?<COMMENTLINE>//[^\n]*)|" +
                     "(?<COMMENTBLOCK>/\\*(.|\\R)*?\\*/)|" +
                     "(?<STRING>\"([^\"\\\\]|\\\\.)*\")|" +
-                    "(?<KEYWORD>\\b(?:if|else|while|return|int|string|boolean|true|false)\\b)|" +
+                    "(?<KEYWORD>\\b(?:if|else|while|return|int|string|boolean|true|false|AND|OR|NOT)\\b)|" +
                     "(?<IDENTIFIER>\\b[a-zA-Z_][a-zA-Z_0-9]*\\b)|" +
                     "(?<NUMBER>\\b\\d+\\b)|" +
                     "(?<OPERATOR>==|!=|<=|>=|\\+|-|\\*|/|=|<|>)|" +
