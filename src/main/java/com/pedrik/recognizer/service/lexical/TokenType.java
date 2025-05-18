@@ -3,18 +3,22 @@ package com.pedrik.recognizer.service.lexical;
 import java.util.regex.Pattern;
 
 public enum TokenType {
-    KEYWORD("(?i)\\b(if|else|while|for|return|true|false|int|float|string|boolean|void)\\b"),
+    TYPE("\\b(int|string|boolean)\\b"),
+    KEYWORD("\\b(if|else|while|return)\\b"),
+    BOOLEAN_LITERAL("\\b(true|false)\\b"),
+    LOGICAL_OPERATOR("\\b(AND|OR|NOT)\\b"),
     IDENTIFIER("\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"),
-    NUMBER("\\b\\d+(\\.\\d+)?\\b"),
-    STRING("\"([^\"\\\\]|\\\\.)*\""),
-    OPERATOR("==|!=|<=|>=|&&|\\|\\||[+\\-*/=<>!]"),
-    DELIMITER("[(){};,\\[\\]]"),
+    NUMBER("\\b\\d+\\b"),
+    STRING("\"[^\"]*\""),
+    ASSIGN("="),
+    OPERATOR("==|!=|<=|>=|<|>|\\+|-|\\*|/"),
+    DELIMITER("[(){};,]"),
     COMMENT_LINE("//[^\\n]*"),
-    COMMENT_BLOCK("/\\*.*?\\*/"),
-    WHITESPACE("[ \t\r\n]+"),
+    COMMENT_BLOCK("/\\*(.|\\R)*?\\*/"),
+    WHITESPACE("[ \t\r\f]+"),
+    NEWLINE("\\n"),
     ERROR("."), // fallback para erro
-    EOF(""); // sem regex, é adicionado manualmente
-
+    EOF(""); // adicionado manualmente
 
     public final Pattern pattern;
 

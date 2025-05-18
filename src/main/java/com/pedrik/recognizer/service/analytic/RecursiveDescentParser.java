@@ -1,10 +1,12 @@
 package com.pedrik.recognizer.service.analytic;
 
+import com.pedrik.recognizer.service.analytic.tree.Node;
+import com.pedrik.recognizer.service.analytic.tree.NonTerminalNode;
+import com.pedrik.recognizer.service.analytic.tree.TerminalNode;
 import com.pedrik.recognizer.service.lexical.Lexer;
 import com.pedrik.recognizer.service.lexical.Token;
 import com.pedrik.recognizer.service.lexical.TokenType;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class RecursiveDescentParser {
@@ -70,11 +72,11 @@ public class RecursiveDescentParser {
         Token token = peek();
         if (token.getType() == TokenType.KEYWORD &&
                 (token.getLexeme().equals("AND") || token.getLexeme().equals("OR"))) {
-            node.addChild(new TerminalNode(consume(TokenType.KEYWORD, token.getLexeme(), depth).getLexeme()));
+            node.addChild(new TerminalNode(consume(TokenType.KEYWORD, token.getLexeme(), depth)));
             node.addChild(parseT(depth + 1));
             node.addChild(parseEPrime(depth + 1));
         } else {
-            node.addChild(new TerminalNode("ε"));
+            node.addChild(new TerminalNode(new Token(TokenType.EOF, "ε", -1, -1)));
             log("ε", depth + 1);
         }
         return node;
@@ -86,7 +88,7 @@ public class RecursiveDescentParser {
         NonTerminalNode node = new NonTerminalNode("T");
         Token token = peek();
         if (token.getType() == TokenType.KEYWORD && token.getLexeme().equals("NOT")) {
-            node.addChild(new TerminalNode(consume(TokenType.KEYWORD, "NOT", depth).getLexeme()));
+            node.addChild(new TerminalNode(consume(TokenType.KEYWORD, "NOT", depth)));
             node.addChild(parseF(depth + 1));
         } else {
             node.addChild(parseF(depth + 1));
@@ -100,11 +102,11 @@ public class RecursiveDescentParser {
         NonTerminalNode node = new NonTerminalNode("F");
         Token token = peek();
         if (token.getType() == TokenType.DELIMITER && token.getLexeme().equals("(")) {
-            node.addChild(new TerminalNode(consume(TokenType.DELIMITER, "(", depth).getLexeme()));
+            node.addChild(new TerminalNode(consume(TokenType.DELIMITER, "(", depth)));
             node.addChild(parseE(depth + 1));
-            node.addChild(new TerminalNode(consume(TokenType.DELIMITER, ")", depth).getLexeme()));
+            node.addChild(new TerminalNode(consume(TokenType.DELIMITER, ")", depth)));
         } else if (token.getType() == TokenType.IDENTIFIER) {
-            node.addChild(new TerminalNode(consume(TokenType.IDENTIFIER, null, depth).getLexeme()));
+            node.addChild(new TerminalNode(consume(TokenType.IDENTIFIER, null, depth)));
         } else {
             throw new RuntimeException("Erro: esperado identificador ou '(', mas encontrou '" + token.getLexeme() + "'");
         }
@@ -127,41 +129,4 @@ public class RecursiveDescentParser {
 }
 
 
-abstract class Node {
-    public abstract void print(String indent);
-}
-
-class NonTerminalNode extends Node {
-    String name;
-    List<Node> children = new ArrayList<>();
-
-    public NonTerminalNode(String name) {
-        this.name = name;
-    }
-
-    public void addChild(Node child) {
-        children.add(child);
-    }
-
-    @Override
-    public void print(String indent) {
-        System.out.println(indent + name);
-        for (Node child : children) {
-            child.print(indent + "  ");
-        }
-    }
-}
-
-class TerminalNode extends Node {
-    String token;
-
-    public TerminalNode(String token) {
-        this.token = token;
-    }
-
-    @Override
-    public void print(String indent) {
-        System.out.println(indent + token);
-    }
-}
 

@@ -12,12 +12,16 @@ public class Lexer {
                     "(?<NEWLINE>\n)|" +
                     "(?<COMMENTLINE>//[^\n]*)|" +
                     "(?<COMMENTBLOCK>/\\*(.|\\R)*?\\*/)|" +
-                    "(?<STRING>\"([^\"\\\\]|\\\\.)*\")|" +
-                    "(?<KEYWORD>\\b(?:if|else|while|return|int|string|boolean|true|false|AND|OR|NOT)\\b)|" +
-                    "(?<IDENTIFIER>\\b[a-zA-Z_][a-zA-Z_0-9]*\\b)|" +
-                    "(?<NUMBER>\\b\\d+\\b)|" +
-                    "(?<OPERATOR>==|!=|<=|>=|\\+|-|\\*|/|=|<|>)|" +
-                    "(?<DELIMITER>[{}()\\[\\];,])";
+                    "(?<TYPE>\\b(?:int|string|boolean)\\b)|" +
+                    "(?<KEYWORD>\\b(?:if|else|while|return)\\b)|" +
+                    "(?<BOOLEANLITERAL>\\b(?:true|false)\\b)|" +
+                    "(?<LOGICALOPERATOR>\\b(?:AND|OR|NOT)\\b)|" +
+                    "(?<IDENTIFIER>[a-zA-Z_][a-zA-Z0-9_]*)|" +
+                    "(?<NUMBER>\\d+)|" +
+                    "(?<STRING>\"[^\"]*\")|" +
+                    "(?<ASSIGN>=)|" +
+                    "(?<OPERATOR>==|!=|<=|>=|<|>|\\+|-|\\*|/)|" +
+                    "(?<SEPARATOR>[(){};,])";
 
     private final String input;
     private final List<Token> tokens = new ArrayList<>();
