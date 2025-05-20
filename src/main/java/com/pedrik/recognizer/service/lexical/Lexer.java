@@ -21,7 +21,7 @@ public class Lexer {
                     "(?<STRING>\"[^\"]*\")|" +
                     "(?<ASSIGN>=)|" +
                     "(?<OPERATOR>==|!=|<=|>=|<|>|\\+|-|\\*|/)|" +
-                    "(?<SEPARATOR>[(){};,])";
+                    "(?<DELIMITER>[(){};,])";
 
     private final String input;
     private final List<Token> tokens = new ArrayList<>();
@@ -42,7 +42,6 @@ public class Lexer {
             if (currentChar == '"') {
                 int start = index;
                 int colStart = column;
-
                 index++;
                 column++;
                 boolean closed = false;
@@ -108,11 +107,10 @@ public class Lexer {
                 }
 
                 int end = index;
-                String comment = input.substring(start + 2, end).trim(); // sem /* */
+                String comment = input.substring(start + 2, end).trim();
                 tokens.add(new Token(TokenType.COMMENT_BLOCK, comment, line, colStart));
 
-                // consume closing */
-                index += 2;
+                index += 2; // consume closing */
                 column += 2;
                 continue;
             }
@@ -141,15 +139,24 @@ public class Lexer {
                 } else if (matcher.group("COMMENTBLOCK") != null) {
                     String comment = lexeme.substring(2, lexeme.length() - 2).trim();
                     token = new Token(TokenType.COMMENT_BLOCK, comment, line, column);
-                } else if (matcher.group("STRING") != null) {
-                    String clean = lexeme.substring(1, lexeme.length() - 1);
-                    token = new Token(TokenType.STRING, clean, line, column);
+                } else if (matcher.group("TYPE") != null) {
+                    token = new Token(TokenType.TYPE, lexeme, line, column);
+                } else if (matcher.group("BOOLEANLITERAL") != null) {
+                    token = new Token(TokenType.BOOLEAN_LITERAL, lexeme, line, column);
+                } else if (matcher.group("LOGICALOPERATOR") != null) {
+                    // Tratamos como KEYWORD (padrão atual do parser)
+                    token = new Token(TokenType.KEYWORD, lexeme, line, column);
                 } else if (matcher.group("KEYWORD") != null) {
                     token = new Token(TokenType.KEYWORD, lexeme, line, column);
                 } else if (matcher.group("IDENTIFIER") != null) {
                     token = new Token(TokenType.IDENTIFIER, lexeme, line, column);
                 } else if (matcher.group("NUMBER") != null) {
                     token = new Token(TokenType.NUMBER, lexeme, line, column);
+                } else if (matcher.group("STRING") != null) {
+                    String clean = lexeme.substring(1, lexeme.length() - 1);
+                    token = new Token(TokenType.STRING, clean, line, column);
+                } else if (matcher.group("ASSIGN") != null) {
+                    token = new Token(TokenType.ASSIGN, lexeme, line, column);
                 } else if (matcher.group("OPERATOR") != null) {
                     token = new Token(TokenType.OPERATOR, lexeme, line, column);
                 } else if (matcher.group("DELIMITER") != null) {
@@ -172,5 +179,4 @@ public class Lexer {
         tokens.add(new Token(TokenType.EOF, "", line, column));
         return tokens;
     }
-
 }
