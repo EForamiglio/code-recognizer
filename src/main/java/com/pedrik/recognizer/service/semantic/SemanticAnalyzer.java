@@ -40,6 +40,31 @@ public class SemanticAnalyzer {
                 }
             }
 
+            // Tratamento de atribuições
+            if (name.equals("Assignment")) {
+                TerminalNode idNode = nonTerminal.getFirstTerminalWithType(TokenType.IDENTIFIER);
+                if (idNode != null) {
+                    Token token = idNode.getToken();
+                    String varName = token.getLexeme();
+
+                    if (!symbolTable.isDeclared(varName)) {
+                        reportError("Variável não declarada na atribuição: " + varName, token);
+                    } else {
+                        String declaredType = symbolTable.getType(varName);
+                        NonTerminalNode exprNode = nonTerminal.getChild(2, NonTerminalNode.class); // expressão depois de '='
+                        if (exprNode != null && exprNode.getSemanticInfo() != null) {
+                            String exprType = exprNode.getSemanticInfo().getType();
+
+                            if (!declaredType.equals(exprType)) {
+                                reportError("Tipo incompatível na atribuição. Esperado: " + declaredType + ", encontrado: " + exprType, token);
+                            } else {
+                                nonTerminal.setSemanticInfo(new SemanticInfo(declaredType, false, false, true));
+                            }
+                        }
+                    }
+                }
+            }
+
             // Tratamento do uso de identificadores e literais booleanos
             if (name.equals("F")) {
                 TerminalNode idNode = nonTerminal.getFirstTerminalWithType(TokenType.IDENTIFIER);
@@ -106,7 +131,14 @@ public class SemanticAnalyzer {
                     }
                 } else {
                     if (node.getSemanticInfo() == null) {
-                        TerminalNode fallback = node.getFirstTerminalWithType(TokenType.IDENTIFIER, TokenType.BOOLEAN_LITERAL);
+                        TerminalNode fallback = node.getFirstTerminalWithType(TokenType.IDENTIFIER);
+                        if (fallback == null) {
+                            fallback = node.getFirstTerminalWithType(TokenType.KEYWORD, "false");
+                            if (fallback == null) {
+                                fallback = node.getFirstTerminalWithType(TokenType.KEYWORD, "true");
+                            }
+                        }
+
                         if (fallback != null) {
                             reportError("Expressão F inválida ou não reconhecida", fallback.getToken());
                         }
@@ -127,5 +159,49 @@ public class SemanticAnalyzer {
 
     public boolean hasErrors() {
         return !errors.isEmpty();
+    }
+
+    // Método de teste
+    public static void main(String[] args) {
+        // Simulação da seguinte entrada:
+        // int x;
+        // boolean y;
+        // x = y;
+
+        // Construção da árvore sintática manualmente
+        NonTerminalNode root = new NonTerminalNode("Program");
+
+        NonTerminalNode decl1 = new NonTerminalNode("Declaration");
+        decl1.addChild(new TerminalNode(new Token(TokenType.KEYWORD, "int", 1, 1)));
+        decl1.addChild(new TerminalNode(new Token(TokenType.IDENTIFIER, "x", 1, 5)));
+
+        NonTerminalNode decl2 = new NonTerminalNode("Declaration");
+        decl2.addChild(new TerminalNode(new Token(TokenType.KEYWORD, "boolean", 2, 1)));
+        decl2.addChild(new TerminalNode(new Token(TokenType.IDENTIFIER, "y", 2, 9)));
+
+        NonTerminalNode assign = new NonTerminalNode("Assignment");
+        assign.addChild(new TerminalNode(new Token(TokenType.IDENTIFIER, "x", 3, 1)));
+        assign.addChild(new TerminalNode(new Token(TokenType.ASSIGN, "=", 3, 3)));
+
+        NonTerminalNode expr = new NonTerminalNode("F");
+        expr.addChild(new TerminalNode(new Token(TokenType.IDENTIFIER, "y", 3, 5)));
+        expr.setSemanticInfo(new SemanticInfo("boolean", false, true, false));
+
+        assign.addChild(expr);
+
+        root.addChild(decl1);
+        root.addChild(decl2);
+        root.addChild(assign);
+
+        // Executar análise semântica
+        SemanticAnalyzer analyzer = new SemanticAnalyzer();
+        analyzer.analyze(root);
+
+        if (analyzer.hasErrors()) {
+            System.out.println("Erros encontrados:");
+            analyzer.getErrors().forEach(System.out::println);
+        } else {
+            System.out.println("Análise semântica concluída sem erros.");
+        }
     }
 }

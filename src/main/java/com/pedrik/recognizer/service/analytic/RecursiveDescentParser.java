@@ -47,13 +47,14 @@ public class RecursiveDescentParser {
         }
     }
 
-    public void parse() {
+    public Node parse() {
         Node root = parseE(0);
         if (peek().getType() != TokenType.EOF) {
             throw new RuntimeException("Erro: entrada não totalmente consumida. Último token: " + peek().getLexeme());
         }
         System.out.println("Entrada válida. Árvore sintática:");
         root.print("");
+        return root; // <- retornar a raiz
     }
 
     // E → T E'

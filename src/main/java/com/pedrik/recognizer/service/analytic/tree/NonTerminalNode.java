@@ -79,5 +79,35 @@ public class NonTerminalNode extends Node {
             child.print(indent + "  ");
         }
     }
+
+    /**
+     * Retorna o filho na posição 'index' se for do tipo fornecido, ou null caso contrário.
+     */
+    public <T extends Node> T getChild(int index, Class<T> type) {
+        if (index < 0 || index >= children.size()) return null;
+        Node child = children.get(index);
+        if (type.isInstance(child)) {
+            return type.cast(child);
+        }
+        return null;
+    }
+
+    /**
+     * Retorna o primeiro TerminalNode com tipo e lexema correspondentes, buscando recursivamente.
+     */
+    public TerminalNode getFirstTerminalWithType(TokenType type, String lexeme) {
+        for (Node child : children) {
+            if (child instanceof TerminalNode terminal) {
+                if (terminal.getToken().getType() == type && terminal.getToken().getLexeme().equalsIgnoreCase(lexeme)) {
+                    return terminal;
+                }
+            } else if (child instanceof NonTerminalNode nonTerminal) {
+                TerminalNode found = nonTerminal.getFirstTerminalWithType(type, lexeme);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
 }
 
